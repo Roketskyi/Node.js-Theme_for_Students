@@ -70,9 +70,14 @@ async function assignTopicsToStudents() {
     try {
         const students = await readStudentsFromFile('students.txt');
         const topics = await readTopicsFromFile('topics.txt');
-        let assignedPairs = await readAssignedTopicsFromFile('assigned_topics.txt');
+        let assignedPairs = await readAssignedTopicsFromFile('assigned_topics.json');
 
         console.log(`Загальна кількість студентів: ${students.length}`);
+
+        // Перевірка кількості тем
+        if (topics.length < students.length) {
+            throw new Error('Недостатньо тем в файлі topics.txt');
+        }
 
         // Виведення кількості студентів з темою
         const studentsWithTopic = assignedPairs.map(pair => pair.student);
@@ -91,8 +96,10 @@ async function assignTopicsToStudents() {
                 continue; // Пропустити цю тему
             }
 
-            console.log(`Тема: ${topic}`);
-            console.log(`Натисніть '+' для призначення цієї теми студенту або натисніть Enter для пропуску:`);
+            console.log(`\nТема: ${topic}`);
+            console.log(`\nЯкщо хочете заваршити роботу програми - надішліть '-'`);
+            console.log(`Натисніть '+' для призначення цієї теми студенту або натисніть Enter для пропуску цієї теми:`);
+            
             const answer = await new Promise((resolve) => {
                 rl.question('', (response) => {
                     resolve(response);
@@ -105,25 +112,30 @@ async function assignTopicsToStudents() {
                 if (studentsWithoutTopic.length > 0) {
                     const randomIndex = Math.floor(Math.random() * studentsWithoutTopic.length);
                     const student = studentsWithoutTopic[randomIndex];
-                    assignedPairs.push({ student, topic });
+                    const id = assignedPairs.length + 1; // Генеруємо id
+                    assignedPairs.push({ id, student, topic }); // Додаємо id до параметрів
                     console.log(`Тему "${topic}" отримав(ла) студент ${student}`);
+                    console.log(`\n---------------------------------------`);
+                    console.log(`Кількість студентів без теми: ${studentsWithoutTopic.length - 1}`);
                 } else {
                     console.log('Усі студенти вже отримали тему.');
                     break;
                 }
             }
+
+            else if (answer === '-') break;
         }
 
         rl.close();
 
         // Перевірка наявності призначених тем після обробки
         if (assignedPairs.length === 0) {
-            fs.writeFileSync('assigned_topics.txt', '[]');
-            console.log('Файл assigned_topics.txt створено і залишений порожнім.');
+            fs.writeFileSync('assigned_topics.json', '[]');
+            console.log('Файл assigned_topics.json створено і залишений порожнім.');
         } else {
             // Запис даних у файл, додавання нових даних до вже існуючих або створення нового файлу
-            fs.writeFileSync('assigned_topics.txt', JSON.stringify(assignedPairs, null, 2));
-            console.log('Дані успішно додано до файлу assigned_topics.txt');
+            fs.writeFileSync('assigned_topics.json', JSON.stringify(assignedPairs, null, 2));
+            console.log('Дані успішно додано до файлу assigned_topics.json');
         }
     } catch (error) {
         console.error('Сталася помилка:', error);
